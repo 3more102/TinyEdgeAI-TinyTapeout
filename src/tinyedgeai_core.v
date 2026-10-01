@@ -1,5 +1,6 @@
 /*
- * Streaming signed-INT8 multiply-accumulate core.
+ * TinyEdgeAI fixed-length signed-INT8 dot-product engine.
+ * Four activation/weight pairs are accumulated per result.
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -17,23 +18,44 @@ module tinyedgeai_core (
   wire signed [7:0]  activation_s = activation;
   wire signed [7:0]  weight_s     = weight;
   wire signed [15:0] product      = activation_s * weight_s;
+  wire signed [23:0] product_ext  = {{8{product[15]}}, product};
 
   reg signed [23:0] accumulator;
+  reg        [1:0]  sample_count;
+  reg signed [7:0]  result_reg;
 
-  localparam signed [23:0] INT8_MAX = 24'sd127;
-  localparam signed [23:0] INT8_MIN = -24'sd128;
+  wire signed [23:0] next_sum = accumulator + product_ext;
+
+  function [7:0] saturate_int8;
+    input signed [23:0] value;
+    begin
+      if (value > 24'sd127)
+        saturate_int8 = 8'h7f;
+      else if (value < -24'sd128)
+        saturate_int8 = 8'h80;
+      else
+        saturate_int8 = value[7:0];
+    end
+  endfunction
 
   always @(posedge clk) begin
-    if (!rst_n)
+    if (!rst_n) begin
       accumulator <= 24'sd0;
-    else if (enable)
-      accumulator <= accumulator + {{8{product[15]}}, product};
+      sample_count <= 2'd0;
+      result_reg   <= 8'sd0;
+    end else if (enable) begin
+      if (sample_count == 2'd3) begin
+        result_reg   <= saturate_int8(next_sum);
+        accumulator  <= 24'sd0;
+        sample_count <= 2'd0;
+      end else begin
+        accumulator  <= next_sum;
+        sample_count <= sample_count + 2'd1;
+      end
+    end
   end
 
-  assign result =
-      (accumulator > INT8_MAX) ? 8'h7f :
-      (accumulator < INT8_MIN) ? 8'h80 :
-      accumulator[7:0];
+  assign result = result_reg;
 
 endmodule
 

@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import random
+
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
@@ -9,7 +11,12 @@ def u8(value: int) -> int:
     return value & 0xFF
 
 
-async def cycle(dut, activation: int, weight: int):
+def sat8(value: int) -> int:
+    return max(-128, min(127, value))
+
+
+async def tick(dut, activation: int, weight: int, enable: int = 1):
+    dut.ena.value = enable
     dut.ui_in.value = u8(activation)
     dut.uio_in.value = u8(weight)
     await RisingEdge(dut.clk)
@@ -26,42 +33,75 @@ async def reset(dut):
     dut.rst_n.value = 1
 
 
+async def send_vector(dut, activations, weights):
+    assert len(activations) == 4
+    assert len(weights) == 4
+
+    previous = int(dut.uo_out.value)
+    for index, (activation, weight) in enumerate(zip(activations, weights)):
+        await tick(dut, activation, weight)
+        if index < 3:
+            assert int(dut.uo_out.value) == previous
+
+    expected = sat8(sum(a * w for a, w in zip(activations, weights)))
+    assert int(dut.uo_out.value) == u8(expected)
+
+
 @cocotb.test()
-async def test_mac_accumulation_and_saturation(dut):
+async def test_dot4_nominal_and_back_to_back(dut):
     cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
     await reset(dut)
 
     assert int(dut.uo_out.value) == 0
     assert int(dut.uio_oe.value) == 0
 
-    await cycle(dut, 3, 4)
+    await send_vector(dut, [3, 5, -2, 4], [4, 2, 3, -1])
     assert int(dut.uo_out.value) == 12
 
-    await cycle(dut, 5, 2)
-    assert int(dut.uo_out.value) == 22
+    await send_vector(dut, [1, 2, 3, 4], [5, 6, 7, 8])
+    assert int(dut.uo_out.value) == 70
 
-    await reset(dut)
-    await cycle(dut, -3, 5)
-    assert int(dut.uo_out.value) == u8(-15)
 
+@cocotb.test()
+async def test_saturation(dut):
+    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
     await reset(dut)
-    await cycle(dut, 127, 127)
+
+    await send_vector(dut, [127, 127, 127, 127], [127, 127, 127, 127])
     assert int(dut.uo_out.value) == 0x7F
 
-    await reset(dut)
-    await cycle(dut, -128, 127)
+    await send_vector(dut, [-128, -128, -128, -128], [127, 127, 127, 127])
     assert int(dut.uo_out.value) == 0x80
 
 
 @cocotb.test()
-async def test_enable_gates_accumulation(dut):
+async def test_enable_pauses_vector(dut):
     cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
     await reset(dut)
 
-    dut.ena.value = 0
-    await cycle(dut, 10, 10)
+    await tick(dut, 2, 3)
+    await tick(dut, 4, 5)
+
+    # Disabled cycles must not advance the 4-sample transaction.
+    await tick(dut, 100, 100, enable=0)
+    await tick(dut, -100, -100, enable=0)
     assert int(dut.uo_out.value) == 0
 
-    dut.ena.value = 1
-    await cycle(dut, 10, 10)
-    assert int(dut.uo_out.value) == 100
+    await tick(dut, 6, 7)
+    assert int(dut.uo_out.value) == 0
+
+    await tick(dut, 8, 9)
+    assert int(dut.uo_out.value) == u8(sat8(2 * 3 + 4 * 5 + 6 * 7 + 8 * 9))
+
+
+@cocotb.test()
+async def test_randomized_reference_model(dut):
+    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+    await reset(dut)
+
+    rng = random.Random(0x54494E59)
+
+    for _ in range(64):
+        activations = [rng.randint(-128, 127) for _ in range(4)]
+        weights = [rng.randint(-128, 127) for _ in range(4)]
+        await send_vector(dut, activations, weights)
