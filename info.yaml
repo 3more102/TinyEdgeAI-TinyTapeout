@@ -1,0 +1,43 @@
+# Tiny Tapeout project information
+project:
+  title:        "TinyEdgeAI: Streaming INT8 MAC Accelerator"
+  author:       "Omar Islam (3more102)"
+  discord:      ""
+  description:  "Compact streaming signed-INT8 MAC accelerator for Tiny Tapeout edge-AI experiments"
+  language:     "Verilog"
+  clock_hz:     50000000
+  tiles:        "1x1"
+  top_module:   "tt_um_3more102_tinyedgeai"
+  source_files:
+    - "project.v"
+    - "tinyedgeai_core.v"
+
+pinout:
+  ui[0]: "activation[0]"
+  ui[1]: "activation[1]"
+  ui[2]: "activation[2]"
+  ui[3]: "activation[3]"
+  ui[4]: "activation[4]"
+  ui[5]: "activation[5]"
+  ui[6]: "activation[6]"
+  ui[7]: "activation[7]"
+
+  uo[0]: "sat_result[0]"
+  uo[1]: "sat_result[1]"
+  uo[2]: "sat_result[2]"
+  uo[3]: "sat_result[3]"
+  uo[4]: "sat_result[4]"
+  uo[5]: "sat_result[5]"
+  uo[6]: "sat_result[6]"
+  uo[7]: "sat_result[7]"
+
+  uio[0]: "weight[0]"
+  uio[1]: "weight[1]"
+  uio[2]: "weight[2]"
+  uio[3]: "weight[3]"
+  uio[4]: "weight[4]"
+  uio[5]: "weight[5]"
+  uio[6]: "weight[6]"
+  uio[7]: "weight[7]"
+
+yaml_version: 6
