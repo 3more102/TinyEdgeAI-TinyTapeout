@@ -4,7 +4,7 @@ import random
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import FallingEdge, RisingEdge
 
 
 def u8(value: int) -> int:
@@ -15,12 +15,22 @@ def sat8(value: int) -> int:
     return max(-128, min(127, value))
 
 
+async def sample_after_active_edge(dut):
+    """Wait through the active edge and sample after half a cycle.
+
+    The falling-edge sample point is intentionally shared by RTL and gate-level
+    simulations. It gives the post-layout unit-delay clock/data network time to
+    settle before outputs are converted to integers.
+    """
+    await RisingEdge(dut.clk)
+    await FallingEdge(dut.clk)
+
+
 async def tick(dut, activation: int, weight: int, enable: int = 1):
     dut.ena.value = enable
     dut.ui_in.value = u8(activation)
     dut.uio_in.value = u8(weight)
-    await RisingEdge(dut.clk)
-    await Timer(1, unit="ns")
+    await sample_after_active_edge(dut)
 
 
 async def reset(dut):
@@ -28,8 +38,12 @@ async def reset(dut):
     dut.ui_in.value = 0
     dut.uio_in.value = 0
     dut.rst_n.value = 0
-    await RisingEdge(dut.clk)
-    await Timer(1, unit="ns")
+
+    # Two reset edges make initialization robust for both RTL and the
+    # back-annotated gate-level clock network.
+    await sample_after_active_edge(dut)
+    await sample_after_active_edge(dut)
+
     dut.rst_n.value = 1
 
 
