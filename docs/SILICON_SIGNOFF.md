@@ -134,7 +134,7 @@ Expected CI environment:
 The canonical physical sign-off path is the repository workflow:
 
 ```bash
-gh workflow run gds.yaml --ref feature/int8-dot4-engine
+gh workflow run gds.yaml --ref main
 ```
 
 The workflow uses:
@@ -143,6 +143,16 @@ The workflow uses:
 - PDK `sky130A`
 - Tiny Tapeout precheck from the same `ttsky26d` action line
 - Tiny Tapeout gate-level test action from the same `ttsky26d` action line
+
+## Post-merge main validation
+
+The frozen implementation was revalidated after merge on `main` commit `d7aa270db0ec7e4ed8e8fdffed6ea5af006c7bbb`. The commits after the merge are documentation-only relative to `b46c1581f383f8154c74109b662be0c51d7162d1`.
+
+- [x] RTL/model workflow PASS — run #32
+- [x] Docs workflow PASS — run #32
+- [x] GDS workflow PASS — run #32
+
+External Tiny Tapeout submission remains a separate step. See `docs/SUBMISSION_CHECKLIST.md`; the project is not considered submitted until a specific revision is confirmed in the Tiny Tapeout portal.
 
 ## Release hygiene
 

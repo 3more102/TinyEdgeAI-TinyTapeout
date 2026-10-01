@@ -49,6 +49,18 @@ make -B
 
 The repository follows the current official `TinyTapeout/ttsky-verilog-template` structure and uses the `ttsky26d` GitHub Actions flow for RTL tests, GDS generation, precheck, gate-level regression, documentation, and optional FPGA generation.
 
+## TTSKY26d submission status
+
+Verified on **2026-10-01**:
+
+- TTSKY26d is open for submission and has an official closing date of **2026-11-30**.
+- The repository matches the current SKY Verilog template metadata format (`yaml_version: 6`).
+- Post-merge `main` CI run #32 passes the RTL/model, documentation, and GDS flows.
+- Silicon readiness and external portal submission are tracked separately.
+- The project is **not claimed as submitted** until a specific revision is confirmed in the Tiny Tapeout portal.
+
+See [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md) for the release freeze, CI evidence, and remaining portal steps.
+
 ## Silicon-readiness snapshot
 
 Characterized source/config commit: `8ee235a90029046bc8b1b79f9874e5f64df463ae`
@@ -68,6 +80,7 @@ Characterized source/config commit: `8ee235a90029046bc8b1b79f9874e5f64df463ae`
 - gate-level cocotb regression: **6/6 passed**
 - GDS artifact: **generated**
 - final PR silicon gates: **PASS** on run #29; PR #1 is **merged**
+- post-merge `main` validation: **PASS** on run #32
 
 ## Roadmap
 
@@ -79,3 +92,4 @@ Characterized source/config commit: `8ee235a90029046bc8b1b79f9874e5f64df463ae`
 6. ✅ Tiny Tapeout precheck and gate-level regression on the 18-bit/40 MHz implementation
 7. ✅ Post-route slew repair with zero strict 0.75 ns max-slew violations
 8. ✅ Final silicon sign-off completed and PR #1 merged
+9. ⏳ Submit and confirm the exact TTSKY26d revision in the Tiny Tapeout portal
