@@ -37,8 +37,11 @@ jobs:
       - name: GL test
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26d
 
+  # Optional visualization deployment. GitHub Pages must be enabled in
+  # repository settings; a Pages configuration failure is not a silicon gate.
   viewer:
     needs: gds
+    continue-on-error: true
     runs-on: ubuntu-24.04
     permissions:
       pages: write
