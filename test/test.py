@@ -7,6 +7,11 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
 
 
+CLOCK_PERIOD_NS = 25
+RANDOM_VECTOR_COUNT = 512
+RANDOM_SEED = 0x54494E59
+
+
 def u8(value: int) -> int:
     return value & 0xFF
 
@@ -31,6 +36,8 @@ async def tick(dut, activation: int, weight: int, enable: int = 1):
     dut.ui_in.value = u8(activation)
     dut.uio_in.value = u8(weight)
     await sample_after_active_edge(dut)
+    assert int(dut.uio_oe.value) == 0
+    assert int(dut.uio_out.value) == 0
 
 
 async def reset(dut):
@@ -40,10 +47,13 @@ async def reset(dut):
     dut.rst_n.value = 0
 
     # Two reset edges make initialization robust for both RTL and the
-    # back-annotated gate-level clock network.
+    # gate-level clock network.
     await sample_after_active_edge(dut)
     await sample_after_active_edge(dut)
 
+    assert int(dut.uo_out.value) == 0
+    assert int(dut.uio_oe.value) == 0
+    assert int(dut.uio_out.value) == 0
     dut.rst_n.value = 1
 
 
@@ -61,40 +71,37 @@ async def send_vector(dut, activations, weights):
     assert int(dut.uo_out.value) == u8(expected)
 
 
+async def start_clock(dut):
+    cocotb.start_soon(Clock(dut.clk, CLOCK_PERIOD_NS, unit="ns").start())
+
+
 @cocotb.test()
-async def test_dot4_nominal_and_back_to_back(dut):
-    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+async def test_zero_nominal_signed_and_back_to_back(dut):
+    await start_clock(dut)
     await reset(dut)
 
+    await send_vector(dut, [0, 0, 0, 0], [0, 0, 0, 0])
     assert int(dut.uo_out.value) == 0
-    assert int(dut.uio_oe.value) == 0
-    assert int(dut.uio_out.value) == 0
 
     await send_vector(dut, [3, 5, -2, 4], [4, 2, 3, -1])
     assert int(dut.uo_out.value) == 12
 
+    await send_vector(dut, [-3, -2, 1, 4], [4, 5, 2, -1])
+    assert int(dut.uo_out.value) == u8(-24)
+
+    await send_vector(dut, [-8, 7, -6, 5], [-4, -3, 2, 1])
+    assert int(dut.uo_out.value) == 4
+
+    # Immediate next vector proves transaction restart/back-to-back behavior.
     await send_vector(dut, [1, 2, 3, 4], [5, 6, 7, 8])
     assert int(dut.uo_out.value) == 70
 
 
 @cocotb.test()
-async def test_saturation(dut):
-    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
-    await reset(dut)
-
-    await send_vector(dut, [127, 127, 127, 127], [127, 127, 127, 127])
-    assert int(dut.uo_out.value) == 0x7F
-
-    await send_vector(dut, [-128, -128, -128, -128], [127, 127, 127, 127])
-    assert int(dut.uo_out.value) == 0x80
-
-
-@cocotb.test()
 async def test_saturation_boundaries(dut):
-    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+    await start_clock(dut)
     await reset(dut)
 
-    # Exact INT8 limits and the first values beyond each limit.
     vectors = [
         ([127, 0, 0, 0], [1, 0, 0, 0], 127),
         ([64, 0, 0, 0], [2, 0, 0, 0], 127),    # +128 -> +127
@@ -108,42 +115,57 @@ async def test_saturation_boundaries(dut):
 
 
 @cocotb.test()
-async def test_enable_pauses_vector(dut):
-    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
-    await reset(dut)
+async def test_enable_pauses_every_transaction_phase(dut):
+    await start_clock(dut)
 
-    await tick(dut, 2, 3)
-    await tick(dut, 4, 5)
+    activations = [1, 2, 3, 4]
+    weights = [2, 2, 2, 2]
+    expected = u8(sum(a * w for a, w in zip(activations, weights)))
 
-    # Disabled cycles must not advance the 4-sample transaction.
-    await tick(dut, 100, 100, enable=0)
-    await tick(dut, -100, -100, enable=0)
-    assert int(dut.uo_out.value) == 0
+    for phase in range(4):
+        await reset(dut)
 
-    await tick(dut, 6, 7)
-    assert int(dut.uo_out.value) == 0
+        for index in range(phase):
+            await tick(dut, activations[index], weights[index])
+            assert int(dut.uo_out.value) == 0
 
-    await tick(dut, 8, 9)
-    assert int(dut.uo_out.value) == u8(sat8(2 * 3 + 4 * 5 + 6 * 7 + 8 * 9))
+        held = int(dut.uo_out.value)
+        for activation, weight in [(127, 127), (-128, -128), (55, -99)]:
+            await tick(dut, activation, weight, enable=0)
+            assert int(dut.uo_out.value) == held
 
+        for index in range(phase, 4):
+            await tick(dut, activations[index], weights[index])
+            if index < 3:
+                assert int(dut.uo_out.value) == held
 
-@cocotb.test()
-async def test_randomized_reference_model(dut):
-    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
-    await reset(dut)
-
-    rng = random.Random(0x54494E59)
-
-    for _ in range(128):
-        activations = [rng.randint(-128, 127) for _ in range(4)]
-        weights = [rng.randint(-128, 127) for _ in range(4)]
-        await send_vector(dut, activations, weights)
+        assert int(dut.uo_out.value) == expected
 
 
 @cocotb.test()
-async def test_accumulator_exact_extrema(dut):
-    """Exercise the exact four-product bounds used by the 18-bit width proof."""
-    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+async def test_reset_discards_partial_vector_after_each_phase(dut):
+    await start_clock(dut)
+
+    partial_a = [10, -20, 30]
+    partial_w = [7, 6, -5]
+
+    for accepted_samples in (1, 2, 3):
+        await reset(dut)
+
+        for index in range(accepted_samples):
+            await tick(dut, partial_a[index], partial_w[index])
+            assert int(dut.uo_out.value) == 0
+
+        await reset(dut)
+        assert int(dut.uo_out.value) == 0
+
+        await send_vector(dut, [1, 1, 1, 1], [1, 2, 3, 4])
+        assert int(dut.uo_out.value) == 10
+
+
+@cocotb.test()
+async def test_accumulator_extrema_and_extreme_patterns(dut):
+    await start_clock(dut)
     await reset(dut)
 
     # Exact maximum sum: 4 * (-128 * -128) = +65536.
@@ -154,19 +176,22 @@ async def test_accumulator_exact_extrema(dut):
     await send_vector(dut, [-128, -128, -128, -128], [127, 127, 127, 127])
     assert int(dut.uo_out.value) == 0x80
 
+    # Alternating extreme signs exercise cancellation and signed extension.
+    activations = [-128, 127, -128, 127]
+    weights = [-128, 127, 127, -128]
+    await send_vector(dut, activations, weights)
+    expected = sat8(sum(a * w for a, w in zip(activations, weights)))
+    assert int(dut.uo_out.value) == u8(expected)
+
 
 @cocotb.test()
-async def test_reset_discards_partial_vector(dut):
-    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+async def test_randomized_reference_model(dut):
+    await start_clock(dut)
     await reset(dut)
 
-    # Start, but do not finish, a vector.
-    await tick(dut, 10, 10)
-    await tick(dut, 20, 2)
+    rng = random.Random(RANDOM_SEED)
 
-    # Reset must discard the partial accumulation and restart the 4-sample phase.
-    await reset(dut)
-    assert int(dut.uo_out.value) == 0
-
-    await send_vector(dut, [1, 1, 1, 1], [2, 3, 4, 5])
-    assert int(dut.uo_out.value) == 14
+    for _ in range(RANDOM_VECTOR_COUNT):
+        activations = [rng.randint(-128, 127) for _ in range(4)]
+        weights = [rng.randint(-128, 127) for _ in range(4)]
+        await send_vector(dut, activations, weights)

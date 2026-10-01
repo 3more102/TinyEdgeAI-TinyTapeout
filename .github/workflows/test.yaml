@@ -22,6 +22,9 @@ jobs:
         shell: bash
         run: pip install -r test/requirements.txt
 
+      - name: Exhaustive arithmetic model checks
+        run: python -m pytest -q test/test_model.py
+
       - name: Run tests
         run: |
           cd test
