@@ -68,6 +68,7 @@ async def test_dot4_nominal_and_back_to_back(dut):
 
     assert int(dut.uo_out.value) == 0
     assert int(dut.uio_oe.value) == 0
+    assert int(dut.uio_out.value) == 0
 
     await send_vector(dut, [3, 5, -2, 4], [4, 2, 3, -1])
     assert int(dut.uo_out.value) == 12
@@ -86,6 +87,24 @@ async def test_saturation(dut):
 
     await send_vector(dut, [-128, -128, -128, -128], [127, 127, 127, 127])
     assert int(dut.uo_out.value) == 0x80
+
+
+@cocotb.test()
+async def test_saturation_boundaries(dut):
+    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+    await reset(dut)
+
+    # Exact INT8 limits and the first values beyond each limit.
+    vectors = [
+        ([127, 0, 0, 0], [1, 0, 0, 0], 127),
+        ([64, 0, 0, 0], [2, 0, 0, 0], 127),    # +128 -> +127
+        ([-128, 0, 0, 0], [1, 0, 0, 0], -128),
+        ([-43, 0, 0, 0], [3, 0, 0, 0], -128),  # -129 -> -128
+    ]
+
+    for activations, weights, expected in vectors:
+        await send_vector(dut, activations, weights)
+        assert int(dut.uo_out.value) == u8(expected)
 
 
 @cocotb.test()
@@ -115,7 +134,7 @@ async def test_randomized_reference_model(dut):
 
     rng = random.Random(0x54494E59)
 
-    for _ in range(64):
+    for _ in range(128):
         activations = [rng.randint(-128, 127) for _ in range(4)]
         weights = [rng.randint(-128, 127) for _ in range(4)]
         await send_vector(dut, activations, weights)
