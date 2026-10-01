@@ -1,11 +1,11 @@
 # Tiny Tapeout project information
 project:
-  title:        "TinyEdgeAI: Streaming INT8 MAC Accelerator"
+  title:        "TinyEdgeAI: 4-Element INT8 Dot-Product Accelerator"
   author:       "Omar Islam (3more102)"
   discord:      ""
-  description:  "Compact streaming signed-INT8 MAC accelerator for Tiny Tapeout edge-AI experiments"
+  description:  "Time-multiplexed signed-INT8 dot-product accelerator for Tiny Tapeout edge-AI experiments"
   language:     "Verilog"
-  clock_hz:     50000000
+  clock_hz:     40000000
   tiles:        "1x1"
   top_module:   "tt_um_3more102_tinyedgeai"
   source_files:
@@ -22,14 +22,14 @@ pinout:
   ui[6]: "activation[6]"
   ui[7]: "activation[7]"
 
-  uo[0]: "sat_result[0]"
-  uo[1]: "sat_result[1]"
-  uo[2]: "sat_result[2]"
-  uo[3]: "sat_result[3]"
-  uo[4]: "sat_result[4]"
-  uo[5]: "sat_result[5]"
-  uo[6]: "sat_result[6]"
-  uo[7]: "sat_result[7]"
+  uo[0]: "dot4_result[0]"
+  uo[1]: "dot4_result[1]"
+  uo[2]: "dot4_result[2]"
+  uo[3]: "dot4_result[3]"
+  uo[4]: "dot4_result[4]"
+  uo[5]: "dot4_result[5]"
+  uo[6]: "dot4_result[6]"
+  uo[7]: "dot4_result[7]"
 
   uio[0]: "weight[0]"
   uio[1]: "weight[1]"
