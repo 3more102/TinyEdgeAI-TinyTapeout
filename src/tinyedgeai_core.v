@@ -18,20 +18,23 @@ module tinyedgeai_core (
   wire signed [7:0]  activation_s = activation;
   wire signed [7:0]  weight_s     = weight;
   wire signed [15:0] product      = activation_s * weight_s;
-  wire signed [23:0] product_ext  = {{8{product[15]}}, product};
+  wire signed [17:0] product_ext  = {{2{product[15]}}, product};
 
-  reg signed [23:0] accumulator;
+  // Four signed INT8 products are bounded by [-65024, +65536].
+  // Signed 18-bit range is [-131072, +131071], so this width is sufficient
+  // with substantial numerical margin and avoids unnecessary adder/FF area.
+  reg signed [17:0] accumulator;
   reg        [1:0]  sample_count;
   reg signed [7:0]  result_reg;
 
-  wire signed [23:0] next_sum = accumulator + product_ext;
+  wire signed [17:0] next_sum = accumulator + product_ext;
 
   function [7:0] saturate_int8;
-    input signed [23:0] value;
+    input signed [17:0] value;
     begin
-      if (value > 24'sd127)
+      if (value > 18'sd127)
         saturate_int8 = 8'h7f;
-      else if (value < -24'sd128)
+      else if (value < -18'sd128)
         saturate_int8 = 8'h80;
       else
         saturate_int8 = value[7:0];
@@ -40,13 +43,13 @@ module tinyedgeai_core (
 
   always @(posedge clk) begin
     if (!rst_n) begin
-      accumulator <= 24'sd0;
+      accumulator <= 18'sd0;
       sample_count <= 2'd0;
       result_reg   <= 8'sd0;
     end else if (enable) begin
       if (sample_count == 2'd3) begin
         result_reg   <= saturate_int8(next_sum);
-        accumulator  <= 24'sd0;
+        accumulator  <= 18'sd0;
         sample_count <= 2'd0;
       end else begin
         accumulator  <= next_sum;

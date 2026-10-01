@@ -8,14 +8,14 @@ The datapath consumes one signed INT8 activation/weight pair per enabled clock c
 
 `dot4 = a0*w0 + a1*w1 + a2*w2 + a3*w3`
 
-After the fourth accepted sample, the 24-bit accumulated sum is saturated to signed INT8 and atomically published on `uo_out[7:0]`. The output remains stable while the next four-sample vector is being accumulated.
+After the fourth accepted sample, the **18-bit** accumulated sum is saturated to signed INT8 and atomically published on `uo_out[7:0]`. The output remains stable while the next four-sample vector is being accumulated.
 
 ### Interface
 
 - `ui_in[7:0]` — signed INT8 activation
 - `uio_in[7:0]` — signed INT8 weight
 - `uo_out[7:0]` — most recently completed saturated dot-product
-- `clk` — transaction clock
+- `clk` — transaction clock; current physical-design target is 40 MHz
 - `rst_n` — active-low reset and vector-boundary restart
 - `ena` — when low, accumulation and the sample counter pause
 - `uio_oe = 0` — bidirectional pins remain inputs
@@ -32,6 +32,7 @@ The cocotb regression checks:
 - positive and negative saturation
 - enable/pause behavior
 - 64 deterministic randomized vectors against a Python reference model
+- RTL and gate-level sampling using the same half-cycle observation point
 
 Run locally:
 
@@ -49,6 +50,7 @@ The repository follows the current official `TinyTapeout/ttsky-verilog-template`
 
 1. ✅ Streaming signed INT8 MAC baseline
 2. ✅ Deterministic 4-element INT8 dot-product engine
-3. ⏳ Measure post-synthesis area/timing and optimize the multiplier/accumulator
-4. ⏳ Add optional quantization/activation mode if tile budget permits
-5. ⏳ Complete gate-level regression and shuttle submission hardening
+3. ✅ Numerical-width reduction from 24-bit to provably sufficient 18-bit accumulation
+4. ⏳ Confirm 40 MHz post-route timing across all reported corners
+5. ⏳ Add optional quantization/activation mode only if physical headroom remains
+6. ⏳ Complete shuttle submission hardening

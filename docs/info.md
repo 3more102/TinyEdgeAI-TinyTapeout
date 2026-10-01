@@ -9,11 +9,13 @@ For each enabled rising edge:
 1. `ui_in[7:0]` is interpreted as a signed INT8 activation.
 2. `uio_in[7:0]` is interpreted as a signed INT8 weight.
 3. The pair is multiplied as signed 8x8 arithmetic.
-4. The signed 16-bit product is sign-extended into a 24-bit accumulator.
+4. The signed 16-bit product is sign-extended into an 18-bit accumulator.
 
 Every four accepted samples, the complete dot product is saturated to [-128, 127] and copied to `uo_out[7:0]`. The internal accumulator and 2-bit sample counter then restart automatically for the next vector. The published result is held stable during accumulation of the next vector.
 
 Driving `rst_n` low clears the partial vector and the output result. When `ena` is low, no sample is accepted and the vector position is preserved.
+
+The physical-design target is 40 MHz (25 ns clock period).
 
 ## How to test
 

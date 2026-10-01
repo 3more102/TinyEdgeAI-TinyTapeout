@@ -2,7 +2,7 @@
 
 ## Datapath
 
-TinyEdgeAI uses a time-multiplexed signed INT8 multiplier feeding a 24-bit accumulator. Reusing one multiplier avoids the area cost of four parallel multipliers.
+TinyEdgeAI uses a time-multiplexed signed INT8 multiplier feeding an **18-bit accumulator**. Reusing one multiplier avoids the area cost of four parallel multipliers.
 
 ```text
 ui_in[7:0]  ---- activation ----\
@@ -22,6 +22,18 @@ A two-bit counter tracks accepted samples. Only `ena=1` advances the state. On s
 
 This creates deterministic, back-to-back four-element vector transactions without sacrificing any operand bits for control signaling.
 
-## Numerical behavior
+## Numerical proof for accumulator width
 
-Each signed INT8 product is in [-16256, 16384]. Four products therefore fit safely in the 24-bit accumulator. Saturation is applied only after the full dot product is complete, avoiding intermediate clipping.
+For signed INT8 operands:
+
+- the largest positive product is `(-128) * (-128) = +16384`
+- the most negative product is `(-128) * 127 = -16256`
+- four products are therefore bounded by `[-65024, +65536]`
+
+A signed 17-bit value can represent at most +65535, so 17 bits are insufficient by exactly one count. Signed **18-bit** storage spans `[-131072, +131071]`, which safely contains the complete dot-product range.
+
+This proof allows the accumulator and associated adder to be reduced from 24 bits to 18 bits without numerical loss.
+
+## Physical-design target
+
+The first 50 MHz dot4 characterization (commit `9027707`) completed GDS but reported worst setup slack of approximately -0.692 ns at the max slow corner. The design target is therefore set to 40 MHz / 25 ns pending final post-route characterization.
