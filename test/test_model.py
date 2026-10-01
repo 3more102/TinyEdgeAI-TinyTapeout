@@ -2,7 +2,6 @@
 
 INT18_MIN = -(1 << 17)
 INT18_MAX = (1 << 17) - 1
-INT18_MASK = (1 << 18) - 1
 
 
 def clamp_int8(value: int) -> int:
@@ -10,19 +9,14 @@ def clamp_int8(value: int) -> int:
 
 
 def rtl_saturate_int8_model(value: int) -> int:
-    """Bit-accurate model of the RTL sign-extension saturation test."""
+    """Bit-accurate value model of the selected explicit RTL clamp."""
     assert INT18_MIN <= value <= INT18_MAX
 
-    raw = value & INT18_MASK
-    bit7 = (raw >> 7) & 1
-    upper = (raw >> 8) & 0x3FF
-    expected_upper = 0x3FF if bit7 else 0x000
-
-    if upper == expected_upper:
-        return raw & 0xFF
-    if (raw >> 17) & 1:
+    if value > 127:
+        return 0x7F
+    if value < -128:
         return 0x80
-    return 0x7F
+    return value & 0xFF
 
 
 def test_saturation_equivalence_exhaustive_over_signed_18_bit_domain():

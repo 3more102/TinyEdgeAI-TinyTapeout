@@ -36,12 +36,14 @@ This proof allows the accumulator and associated adder to be reduced from 24 bit
 
 ## Saturation implementation
 
-A signed 18-bit value fits exactly in INT8 when bits `[17:8]` are all copies of bit `[7]`. The RTL uses this sign-extension property instead of two wide signed magnitude comparisons.
+The selected RTL uses an explicit signed clamp after the complete 18-bit dot product:
 
-If the sign-extension test passes, `value[7:0]` is returned unchanged. Otherwise `value[17]` selects negative saturation (`0x80`) or positive saturation (`0x7F`).
+- values above +127 produce `0x7F`;
+- values below -128 produce `0x80`;
+- values inside the INT8 range pass through unchanged.
 
-This transformation is functionally equivalent to clamping against -128 and +127 while reducing logic on the final result path.
+A sign-extension-fit implementation was also proven functionally equivalent over the complete signed 18-bit domain, but physical A/B characterization showed that it reduced only three synthesized cells while losing about 1.17 ns of worst setup margin and increasing strict max-slew violations. The explicit comparator clamp was therefore retained.
 
 ## Physical-design target
 
-The first 50 MHz dot4 characterization (commit `9027707`) completed GDS but reported worst setup slack of approximately -0.692 ns at the max slow corner. The design target is therefore set to 40 MHz / 25 ns pending final post-route characterization.
+The original 24-bit design at 50 MHz had approximately -0.692 ns worst setup slack. The selected 18-bit design is therefore targeted at **40 MHz / 25 ns**. The characterized comparator-clamp candidate closes setup and hold across all reported corners with +4.2926 ns worst setup slack and +0.1100 ns worst hold slack.
