@@ -46,4 +46,4 @@ A sign-extension-fit implementation was also proven functionally equivalent over
 
 ## Physical-design target
 
-The original 24-bit design at 50 MHz had approximately -0.692 ns worst setup slack. The selected 18-bit design is therefore targeted at **40 MHz / 25 ns**. The characterized comparator-clamp candidate closes setup and hold across all reported corners with +4.2926 ns worst setup slack and +0.1100 ns worst hold slack.
+The original 24-bit design at 50 MHz had approximately -0.692 ns worst setup slack. The selected 18-bit design is therefore targeted at **40 MHz / 25 ns**. The final characterized comparator-clamp configuration adds post-global-routing design repair with a 50% slew margin. At commit `8ee235a9`, it closes setup and hold across every reported corner with **+6.1106 ns** worst setup slack and **+0.1100 ns** worst hold slack, while reporting **zero** strict 0.75 ns max-slew violations.

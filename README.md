@@ -49,6 +49,25 @@ make -B
 
 The repository follows the current official `TinyTapeout/ttsky-verilog-template` structure and uses the `ttsky26d` GitHub Actions flow for RTL tests, GDS generation, precheck, gate-level regression, documentation, and optional FPGA generation.
 
+## Silicon-readiness snapshot
+
+Characterized source/config commit: `8ee235a90029046bc8b1b79f9874e5f64df463ae`
+
+- target: **40 MHz / 25 ns**, **1x1** Tiny Tapeout tile, SKY130 / `ttsky26d`
+- RTL regression: **6/6 passed**, including **512 deterministic randomized vectors**
+- exhaustive arithmetic checks: all **262,144 signed 18-bit values** for saturation equivalence and all **65,536 INT8 operand pairs** for product bounds
+- synthesized cells: **612**
+- synthesized cell area: **6478.7136 µm²**
+- post-route standard-cell utilization: **44.7201%**
+- worst setup slack: **+6.1106 ns**
+- worst hold slack: **+0.1100 ns**
+- strict 0.75 ns max-slew violations: **0**
+- max-capacitance / max-fanout violations: **0 / 0**
+- routing DRC / Magic DRC / LVS: **clear / clear / clear**
+- Tiny Tapeout precheck: **passed**
+- gate-level cocotb regression: **6/6 passed**
+- GDS artifact: **generated**
+
 ## Roadmap
 
 1. ✅ Streaming signed INT8 MAC baseline
@@ -57,5 +76,5 @@ The repository follows the current official `TinyTapeout/ttsky-verilog-template`
 4. ✅ 40 MHz setup/hold timing closure across reported corners
 5. ✅ PPA A/B comparison of saturation implementations; retained the higher-margin comparator clamp
 6. ✅ Tiny Tapeout precheck and gate-level regression on the 18-bit/40 MHz implementation
-7. ⏳ Evaluate strict max-slew cleanup without trading away timing margin
+7. ✅ Post-route slew repair with zero strict 0.75 ns max-slew violations
 8. ⏳ Shuttle submission hardening
