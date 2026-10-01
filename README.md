@@ -67,6 +67,7 @@ Characterized source/config commit: `8ee235a90029046bc8b1b79f9874e5f64df463ae`
 - Tiny Tapeout precheck: **passed**
 - gate-level cocotb regression: **6/6 passed**
 - GDS artifact: **generated**
+- final PR silicon gates: **PASS** on run #29; PR #1 is **merged**
 
 ## Roadmap
 
@@ -77,4 +78,4 @@ Characterized source/config commit: `8ee235a90029046bc8b1b79f9874e5f64df463ae`
 5. ✅ PPA A/B comparison of saturation implementations; retained the higher-margin comparator clamp
 6. ✅ Tiny Tapeout precheck and gate-level regression on the 18-bit/40 MHz implementation
 7. ✅ Post-route slew repair with zero strict 0.75 ns max-slew violations
-8. ⏳ Shuttle submission hardening
+8. ✅ Final silicon sign-off completed and PR #1 merged
