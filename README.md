@@ -29,9 +29,12 @@ The cocotb regression checks:
 - deterministic four-sample transaction boundaries
 - signed positive/negative arithmetic
 - back-to-back vectors
-- positive and negative saturation
+- exact INT8 saturation thresholds at 127, 128, -128, and -129
+- exact accumulator extrema at +65536 and -65024
 - enable/pause behavior
-- 64 deterministic randomized vectors against a Python reference model
+- reset during a partial vector
+- fixed bidirectional-output configuration
+- 128 deterministic randomized vectors against a Python reference model
 - RTL and gate-level sampling using the same half-cycle observation point
 
 Run locally:
@@ -51,6 +54,7 @@ The repository follows the current official `TinyTapeout/ttsky-verilog-template`
 1. ✅ Streaming signed INT8 MAC baseline
 2. ✅ Deterministic 4-element INT8 dot-product engine
 3. ✅ Numerical-width reduction from 24-bit to provably sufficient 18-bit accumulation
-4. ⏳ Confirm 40 MHz post-route timing across all reported corners
-5. ⏳ Add optional quantization/activation mode only if physical headroom remains
-6. ⏳ Complete shuttle submission hardening
+4. ✅ Comparator-free INT8 saturation using sign-extension detection
+5. ⏳ Confirm 40 MHz post-route timing across all reported corners
+6. ⏳ Add optional quantization/activation mode only if physical headroom remains
+7. ⏳ Complete shuttle submission hardening
