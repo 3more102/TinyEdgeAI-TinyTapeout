@@ -14,6 +14,11 @@ This document is the release-freeze checklist for PR #1 and the Tiny Tapeout sub
 - Clock period: 25 ns
 - Characterized source/config commit: `8ee235a90029046bc8b1b79f9874e5f64df463ae`
 - Release-hardening predecessor commit: `8aa1947e883baf0c4f95963a8158c92227affa3a`
+- Final PR head: `f5f9bddeb6662d3eb89059fabe67a3e48a625b6b`
+- Verified PR synthetic-merge tree: `913eaaaa68e7c52f0c90a3398c76a4928a73a45c`
+- Actual merged `main` commit: `b46c1581f383f8154c74109b662be0c51d7162d1`
+
+GitHub PR workflows checked out the synthetic merge ref for the final PR head. A direct commit comparison between `913eaaaa...` and the actual merge commit `b46c1581...` reports zero changed files, so the silicon-tested tree is the same tree that was merged to `main`.
 
 The commits after the characterized source/config commit contain documentation and CI-trigger hardening only. Any later change to RTL, `src/config.json`, `info.yaml`, pin mapping, or physical-flow inputs invalidates the physical evidence below and requires a fresh sign-off run.
 
@@ -50,7 +55,7 @@ The selected regression contains six cocotb tests plus exhaustive Python arithme
 
 ## Physical evidence
 
-Evidence recorded for commit `8ee235a90029046bc8b1b79f9874e5f64df463ae`:
+Source/config characterization began at `8ee235a90029046bc8b1b79f9874e5f64df463ae`. Final PR GDS run #29 reproduced the same silicon results on the verified PR merge tree `913eaaaa68e7c52f0c90a3398c76a4928a73a45c`, whose tree matches merged commit `b46c1581f383f8154c74109b662be0c51d7162d1`:
 
 - [x] Synthesis completed
 - [x] Synthesized cells: 612
@@ -69,7 +74,7 @@ Evidence recorded for commit `8ee235a90029046bc8b1b79f9874e5f64df463ae`:
 - [x] Magic DRC: 0
 - [x] LVS errors: 0
 - [x] GDS generated
-- [ ] Exact final unconstrained-functional-path count must be confirmed from the current-head timing report before release freeze
+- [x] No unconstrained functional timing paths: post-route `check_setup -unconstrained_endpoints -no_clock -no_input_delay` produced no findings in all nine reported corners
 
 The selected post-global-routing repair keeps the transition constraint unchanged and uses `GRT_DESIGN_REPAIR_MAX_SLEW_PCT=50`; it is a repair setting, not a checker relaxation.
 
@@ -91,13 +96,15 @@ The selected post-global-routing repair keeps the transition constraint unchange
 
 PR workflows are intentionally configured to run on `pull_request`, on pushes to `main`, and by manual dispatch. This avoids relying on stale branch-push evidence when deciding whether PR #1 is ready.
 
-The final PR HEAD must show:
+The final PR candidate is verified:
 
-- [ ] RTL/model workflow PASS
-- [ ] GDS build PASS
-- [ ] Tiny Tapeout precheck PASS
-- [ ] Gate-level regression PASS
-- [ ] Silicon-relevant reports correspond to the same final HEAD
+- [x] RTL/model workflow PASS — run #29
+- [x] GDS build PASS — run #29
+- [x] Tiny Tapeout precheck PASS — run #29
+- [x] Gate-level regression PASS — 6/6 on run #29
+- [x] Silicon-relevant reports and artifacts belong to the final PR workflow run and verified merge tree
+
+Artifact metadata associates run #29 with final PR head `f5f9bddeb6662d3eb89059fabe67a3e48a625b6b`; the workflow checkout/physical artifact records synthetic merge commit `913eaaaa68e7c52f0c90a3398c76a4928a73a45c`. That tree has zero file differences from actual merged commit `b46c1581f383f8154c74109b662be0c51d7162d1`.
 
 The optional layout viewer may fail if GitHub Pages is not enabled; it is not a silicon gate.
 
@@ -147,8 +154,20 @@ The workflow uses:
 - [x] Architecture and physical-design evidence are documented
 - [x] Rejected comparator-free saturation experiment is documented and not selected
 - [x] Strict slew constraint was not hidden or relaxed
-- [ ] Final-head CI evidence must be checked before changing PR #1 from Draft to Ready for Review
+- [x] Final PR CI evidence checked; PR #1 subsequently left Draft and was merged
 
-## Freeze rule
+## Final release state
 
-Do not mark PR #1 Ready for Review, merge it, or create a submission tag until every unchecked item above has objective evidence from the final PR HEAD. If the HEAD changes after a passing run, repeat the gate.
+- PR #1: **MERGED**
+- final PR head: `f5f9bddeb6662d3eb89059fabe67a3e48a625b6b`
+- verified PR merge tree: `913eaaaa68e7c52f0c90a3398c76a4928a73a45c`
+- actual merge commit: `b46c1581f383f8154c74109b662be0c51d7162d1`
+- release-gate status: **SATISFIED**
+- GitHub release/tag: not yet created
+
+Non-blocking observations:
+
+- optional layout-viewer deployment fails with HTTP 404 because GitHub Pages is not enabled; GDS generation itself is successful
+- final parasitic annotation reports 16 unannotated `HI` constant-driver entries and 0 partially unannotated drivers; no timing violation results from them
+
+Any future change to RTL, `src/config.json`, `info.yaml`, pin mapping, or physical-flow inputs invalidates this sign-off and requires a fresh silicon gate.
