@@ -32,12 +32,15 @@ module tinyedgeai_core (
   function [7:0] saturate_int8;
     input signed [17:0] value;
     begin
-      if (value > 18'sd127)
-        saturate_int8 = 8'h7f;
-      else if (value < -18'sd128)
+      // A signed value fits in INT8 exactly when all bits above bit 7 are
+      // copies of bit 7. This avoids wide magnitude comparators on the
+      // multiplier -> accumulator -> saturation result path.
+      if (value[17:8] == {10{value[7]}})
+        saturate_int8 = value[7:0];
+      else if (value[17])
         saturate_int8 = 8'h80;
       else
-        saturate_int8 = value[7:0];
+        saturate_int8 = 8'h7f;
     end
   endfunction
 
