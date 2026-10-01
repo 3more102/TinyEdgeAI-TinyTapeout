@@ -119,3 +119,35 @@ async def test_randomized_reference_model(dut):
         activations = [rng.randint(-128, 127) for _ in range(4)]
         weights = [rng.randint(-128, 127) for _ in range(4)]
         await send_vector(dut, activations, weights)
+
+
+@cocotb.test()
+async def test_accumulator_exact_extrema(dut):
+    """Exercise the exact four-product bounds used by the 18-bit width proof."""
+    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+    await reset(dut)
+
+    # Exact maximum sum: 4 * (-128 * -128) = +65536.
+    await send_vector(dut, [-128, -128, -128, -128], [-128, -128, -128, -128])
+    assert int(dut.uo_out.value) == 0x7F
+
+    # Exact minimum sum: 4 * (-128 * 127) = -65024.
+    await send_vector(dut, [-128, -128, -128, -128], [127, 127, 127, 127])
+    assert int(dut.uo_out.value) == 0x80
+
+
+@cocotb.test()
+async def test_reset_discards_partial_vector(dut):
+    cocotb.start_soon(Clock(dut.clk, 20, unit="ns").start())
+    await reset(dut)
+
+    # Start, but do not finish, a vector.
+    await tick(dut, 10, 10)
+    await tick(dut, 20, 2)
+
+    # Reset must discard the partial accumulation and restart the 4-sample phase.
+    await reset(dut)
+    assert int(dut.uo_out.value) == 0
+
+    await send_vector(dut, [1, 1, 1, 1], [2, 3, 4, 5])
+    assert int(dut.uo_out.value) == 14
