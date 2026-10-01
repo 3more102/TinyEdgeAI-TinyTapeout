@@ -34,6 +34,14 @@ A signed 17-bit value can represent at most +65535, so 17 bits are insufficient 
 
 This proof allows the accumulator and associated adder to be reduced from 24 bits to 18 bits without numerical loss.
 
+## Saturation implementation
+
+A signed 18-bit value fits exactly in INT8 when bits `[17:8]` are all copies of bit `[7]`. The RTL uses this sign-extension property instead of two wide signed magnitude comparisons.
+
+If the sign-extension test passes, `value[7:0]` is returned unchanged. Otherwise `value[17]` selects negative saturation (`0x80`) or positive saturation (`0x7F`).
+
+This transformation is functionally equivalent to clamping against -128 and +127 while reducing logic on the final result path.
+
 ## Physical-design target
 
 The first 50 MHz dot4 characterization (commit `9027707`) completed GDS but reported worst setup slack of approximately -0.692 ns at the max slow corner. The design target is therefore set to 40 MHz / 25 ns pending final post-route characterization.
